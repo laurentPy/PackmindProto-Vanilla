@@ -1,0 +1,57 @@
+# PackmindProto-Vanilla/.github/workflows/packmind-check.yml
+name: Packmind ADR Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  packmind:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) Get your demo‐app code
+      - uses: actions/checkout@v4
+
+      # 2) Fetch the Packmind engine (CLI & workflows)
+      - uses: actions/checkout@v4
+        with:
+          repository: laurentPy/PackmindProto
+          path: packmind
+
+      # 3) Set up Python & JDK
+      - uses: actions/setup-python@v4
+        with: { python-version: "3.x" }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # 4) Run ArchUnit tests in `vanilla/` (your checked‐out code)
+      - run: ./gradlew --no-daemon clean test
+        working-directory: .
+
+      # 5) Convert XML → SARIF
+      - run: |
+          pip install junit2sarif
+          junit2sarif build/test-results/test --output report_archunit.sarif
+
+      # 6) Invoke Packmind CLI against those SARIFs
+      - run: |
+          python packmind/cli/packmind_cli.py \
+            --sarif report_archunit.sarif \
+            --sarif report.sarif \
+            --manifest-url http://your-packmind-server/manifest \
+            --upload-url   http://your-packmind-server/api/upload \
+            --repo         "${{ github.repository }}" \
+            --output       annotations.json
+
+      # 7) Post annotations back to this PR
+      - uses: peter-evans/create-check@v2
+        with:
+          token: ${{ secrets.PACKMIND_TOKEN }}
+          name: Packmind ADR Check
+          status: completed
+          conclusion: failure
+          output: |
+            title: Packmind ADR Violations
+            summary: ${{ fromJson(steps.<step-id>.outputs.annotations).length }} violations found
+            annotations: ${{ steps.<step-id>.outputs.annotations }}
