@@ -1,56 +1,77 @@
-# PackmindProto-Vanilla/.github/workflows/packmind-check.yml
+# File: PackmindProto-Vanilla/.github/workflows/packmind-check.yml
 name: Packmind ADR Check
+
+# Trigger on PRs against main
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Grant minimal token scopes
+permissions:
+  contents: read    # for checkout
+  checks:   write   # to publish annotations
+
 jobs:
   packmind:
     runs-on: ubuntu-latest
-    steps:
-      # 1) Get your demo‐app code
-      - uses: actions/checkout@v4
 
-      # 2) Fetch the Packmind engine (CLI & workflows)
-      - uses: actions/checkout@v4
+    steps:
+      # 1) Checkout the demo app (this repo)
+      - name: Checkout demo app
+        uses: actions/checkout@v4
+
+      # 2) Checkout the Packmind engine (CLI + server code)
+      - name: Checkout Packmind engine
+        uses: actions/checkout@v4
         with:
           repository: laurentPy/PackmindProto
           path: packmind
 
-      # 3) Set up Python & JDK
-      - uses: actions/setup-python@v4
-        with: { python-version: "3.x" }
-      - uses: actions/setup-java@v4
+      # 3) Set up Python & Java runtimes
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 4) Run ArchUnit tests in `vanilla/` (your checked‐out code)
-      - run: ./gradlew --no-daemon clean test
+      # 4) Run ArchUnit tests in your vanilla app
+      - name: Run ArchUnit tests
         working-directory: .
+        run: ./gradlew --no-daemon clean test
 
-      # 5) Convert XML → SARIF
-      - run: |
-          pip install junit2sarif
+      # 5) Convert JUnit XML → SARIF
+      - name: Convert JUnit XML to SARIF
+        run: |
+          python -m pip install junit2sarif
           junit2sarif build/test-results/test --output report_archunit.sarif
 
-      # 6) Invoke Packmind CLI against those SARIFs
-      - run: |
+      # 6) Invoke Packmind CLI to fetch manifest & upload SARIFs
+      - name: Invoke Packmind CLI
+        id: packmind
+        run: |
           python packmind/cli/packmind_cli.py \
             --sarif report_archunit.sarif \
             --sarif report.sarif \
-            --manifest-url http://your-packmind-server/manifest \
-            --upload-url   http://your-packmind-server/api/upload \
+            --manifest-url http://localhost:8000/manifest \
+            --upload-url   http://localhost:8000/api/upload \
             --repo         "${{ github.repository }}" \
             --output       annotations.json
+          # Capture the array of annotations for the next step
+          echo "::set-output name=annotations::$(jq -c . < annotations.json)"
 
-      # 7) Post annotations back to this PR
-      - uses: peter-evans/create-check@v2
+      # 7) Publish a GitHub Check Run with inline annotations
+      - name: Publish Packmind ADR Check
+        uses: peter-evans/create-check@v3
         with:
-          token: ${{ secrets.PACKMIND_TOKEN }}
-          name: Packmind ADR Check
-          status: completed
-          conclusion: failure
+          token:       ${{ secrets.PACKMIND_TOKEN }}
+          name:        Packmind ADR Check
+          status:      completed
+          conclusion:  ${{ steps.packmind.outcome == 'success' && 'success' || 'failure' }}
           output: |
             title: Packmind ADR Violations
             summary: ${{ fromJson(steps.packmind.outputs.annotations).length }} violations found
