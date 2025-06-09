@@ -53,5 +53,5 @@ jobs:
           conclusion: failure
           output: |
             title: Packmind ADR Violations
-            summary: ${{ fromJson(steps.<step-id>.outputs.annotations).length }} violations found
-            annotations: ${{ steps.<step-id>.outputs.annotations }}
+            summary: ${{ fromJson(steps.packmind.outputs.annotations).length }} violations found
+            annotations: ${{ steps.packmind.outputs.annotations }}
