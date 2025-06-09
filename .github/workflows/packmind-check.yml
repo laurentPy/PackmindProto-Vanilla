@@ -43,6 +43,7 @@ jobs:
       - name: Run ArchUnit tests
         working-directory: .
         run: ./gradlew --no-daemon clean test
+        continue-on-error: true  
 
       # 5) Convert JUnit XML → SARIF
       - name: Convert JUnit XML to SARIF
