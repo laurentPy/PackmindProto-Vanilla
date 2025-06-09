@@ -43,7 +43,7 @@ jobs:
       - name: Install CLI dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests pyyaml
+          python -m pip install requests pyyaml
 
       # 4) Run ArchUnit tests in your vanilla app
       - name: Run ArchUnit tests
@@ -66,7 +66,7 @@ jobs:
       - name: Invoke Packmind CLI
         id: packmind
         run: |
-          python packmind/cli/packmind_cli.py \
+          python -m packmind.cli.packmind_cli \
             --sarif report_archunit.sarif \
             --sarif report.sarif \
             --manifest-url http://localhost:8000/manifest \
