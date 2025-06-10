@@ -69,8 +69,8 @@ jobs:
           python -m packmind.cli.packmind_cli \
             --sarif report_archunit.sarif \
             --sarif report.sarif \
-            --manifest-url http://localhost:8000/manifest \
-            --upload-url   http://localhost:8000/api/upload \
+            --manifest-url https://packmindproto.onrender.com/manifest \
+            --upload-url   https://packmindproto.onrender.com/api/upload \
             --repo         "${{ github.repository }}" \
             --output       annotations.json
           # Capture the array of annotations for the next step
