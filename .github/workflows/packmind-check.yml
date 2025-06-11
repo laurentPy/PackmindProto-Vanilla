@@ -84,14 +84,10 @@ jobs:
           echo "::set-output name=annotations::$(jq -c . < annotations.json)"
 
       # 7) Publish a GitHub Check Run with inline annotations
-      - name: Publish Packmind ADR Check
-        uses: peter-evans/create-check@v3
+      - name: Upload Packmind Annotations
+        uses: kibalabs/github-action-create-annotations@main
         with:
-          token:       ${{ secrets.PACKMIND_TOKEN }}
-          name:        Packmind ADR Check
-          status:      completed
-          conclusion:  ${{ steps.packmind.outcome == 'success' && 'success' || 'failure' }}
-          output: |
-            title: Packmind ADR Violations
-            summary: ${{ fromJson(steps.packmind.outputs.annotations).length }} violations found
-            annotations: ${{ steps.packmind.outputs.annotations }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          json-file-path: annotations.json
+          check-name: Packmind ADR Check
+          fail-on-error: false
