@@ -61,6 +61,13 @@ jobs:
             python packmind/xml2sarif.py "$xml" report_archunit.sarif
           done
 
+      - name: Debug XML & SARIF Outputs
+        if: always() # ensures this step runs even if tests fail
+        run: |
+          echo "🟢 XML Test Report:"
+          cat build/test-results/test/TEST-com.example.ArchRules.xml
+          echo -e "\n🟢 SARIF Report (report_archunit.sarif):"
+          cat report_archunit.sarif
 
       # 6) Invoke Packmind CLI to fetch manifest & upload SARIFs
       - name: Invoke Packmind CLI
@@ -77,14 +84,10 @@ jobs:
           echo "::set-output name=annotations::$(jq -c . < annotations.json)"
 
       # 7) Publish a GitHub Check Run with inline annotations
-#      - name: Publish Packmind ADR Check
-#        uses: peter-evans/create-check@v3
-#        with:
-#          token:       ${{ secrets.PACKMIND_TOKEN }}
-#          name:        Packmind ADR Check
-#          status:      completed
-#          conclusion:  ${{ steps.packmind.outcome == 'success' && 'success' || 'failure' }}
-#          output: |
-#            title: Packmind ADR Violations
-#            summary: ${{ fromJson(steps.packmind.outputs.annotations).length }} violations found
-#            annotations: ${{ steps.packmind.outputs.annotations }}
+      - name: Upload Packmind Annotations
+        uses: kibalabs/github-action-create-annotations@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          json-file-path: annotations.json
+          check-name: Packmind ADR Check
+          fail-on-error: false

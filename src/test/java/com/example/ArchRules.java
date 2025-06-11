@@ -16,7 +16,7 @@ public class ArchRules {
         ArchRule rule = noClasses()
             .that().resideInAPackage("..ui..")
             .should().accessClassesThat().resideInAPackage("..core..")
-            .because("UI must talk to core via API layer");
+            .because("ADR-SA-001 (ui_should_not_access_core): UI must talk to core via API layer");
         rule.check(imported);
     }
 }
